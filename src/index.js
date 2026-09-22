@@ -15,6 +15,80 @@ export default {
 
     /*
      * =========================================
+     * GET /image?url=...
+     * Proxy Gemini images
+     * =========================================
+     */
+
+    if (url.pathname === "/image") {
+      const imageUrl =
+        url.searchParams.get("url");
+
+      if (
+        !imageUrl ||
+        !/^https?:\/\//i.test(imageUrl)
+      ) {
+        return new Response(
+          "Invalid image URL.",
+          { status: 400 }
+        );
+      }
+
+      try {
+        const imageResponse =
+          await fetch(imageUrl, {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+
+              "Referer":
+                "https://gemini.google.com/",
+            },
+          });
+
+        if (!imageResponse.ok) {
+          return new Response(
+            "Image could not be fetched.",
+            {
+              status:
+                imageResponse.status,
+            }
+          );
+        }
+
+        const headers =
+          new Headers();
+
+        headers.set(
+          "Content-Type",
+          imageResponse.headers.get(
+            "Content-Type"
+          ) || "image/jpeg"
+        );
+
+        headers.set(
+          "Cache-Control",
+          "public, max-age=86400"
+        );
+
+        return new Response(
+          imageResponse.body,
+          {
+            status: 200,
+            headers,
+          }
+        );
+
+      } catch (error) {
+        return new Response(
+          "Image proxy failed.",
+          { status: 502 }
+        );
+      }
+    }
+
+    /*
+     * =========================================
      * GET /chat/{id}
      * =========================================
      */
@@ -457,6 +531,11 @@ function conversationRoot(payload) {
 }
 
 
+/* =========================================================
+   TURNS
+   ========================================================= */
+
+
 function extractTurns(root) {
   const messages = [];
   const turnMetadata = [];
@@ -508,6 +587,39 @@ function extractTurns(root) {
         nested(turn, 4)
       );
 
+    /*
+     * =========================================
+     * Media متعلق به همین turn
+     * =========================================
+     */
+
+    const turnMedia = [];
+    const seenTurnMedia = new Set();
+
+    for (
+      const item of mediaFromValue(turn)
+    ) {
+      if (
+        !seenTurnMedia.has(item.url)
+      ) {
+        seenTurnMedia.add(item.url);
+        turnMedia.push(item);
+      }
+
+      if (
+        !seenMedia.has(item.url)
+      ) {
+        seenMedia.add(item.url);
+        media.push(item);
+      }
+    }
+
+    /*
+     * =========================================
+     * User
+     * =========================================
+     */
+
     const prompt =
       nested(turn, 2);
 
@@ -519,11 +631,21 @@ function extractTurns(root) {
     if (userText) {
       messages.push({
         role: "user",
+
         text:
           cleanText(userText),
+
         createdAt,
+
+        media: [],
       });
     }
+
+    /*
+     * =========================================
+     * Gemini
+     * =========================================
+     */
 
     const response =
       nested(turn, 3);
@@ -543,26 +665,46 @@ function extractTurns(root) {
           ),
 
         createdAt,
+
+        /*
+         * عکس‌های همین turn
+         * داخل خود پیام Gemini قرار می‌گیرند.
+         */
+        media:
+          turnMedia,
       });
+    } else if (
+      turnMedia.length > 0 &&
+      userText
+    ) {
+      /*
+       * اگر پاسخ متنی Gemini نداشت،
+       * عکس را به User متصل می‌کنیم.
+       */
+      const lastMessage =
+        messages[messages.length - 1];
+
+      if (
+        lastMessage &&
+        lastMessage.role === "user"
+      ) {
+        lastMessage.media =
+          turnMedia;
+      }
     }
 
     turnMetadata.push({
       index: turnIndex,
-      conversationId,
-      responseId,
-      createdAt,
-    });
 
-    for (
-      const item of mediaFromValue(turn)
-    ) {
-      if (
-        !seenMedia.has(item.url)
-      ) {
-        seenMedia.add(item.url);
-        media.push(item);
-      }
-    }
+      conversationId,
+
+      responseId,
+
+      createdAt,
+
+      media:
+        turnMedia,
+    });
   }
 
   return {
@@ -807,12 +949,6 @@ function renderConversationHtml(result) {
       )
       .join("\n");
 
-  /*
-   * تصاویر استخراج‌شده از خود پاسخ Gemini
-   */
-  const mediaHtml =
-    renderMedia(result.media);
-
   return `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -861,7 +997,9 @@ function renderConversationHtml(result) {
     body {
       margin: 0;
       padding: 0;
+
       background: #ffffff;
+
       color: #202124;
 
       font-family:
@@ -876,94 +1014,170 @@ function renderConversationHtml(result) {
 
     article {
       width: min(900px, 100%);
+
       margin: 0 auto;
-      padding: 32px 20px 60px;
+
+      padding:
+        32px 20px 60px;
     }
 
     header {
       margin-bottom: 36px;
+
       padding-bottom: 20px;
-      border-bottom: 1px solid #e5e7eb;
+
+      border-bottom:
+        1px solid #e5e7eb;
     }
 
     h1 {
-      margin: 0 0 10px;
+      margin:
+        0 0 10px;
+
       font-size: 2rem;
+
       line-height: 1.4;
     }
 
     .source {
       font-size: 0.85rem;
+
       color: #6b7280;
+
       direction: ltr;
+
       text-align: left;
+
       overflow-wrap: anywhere;
     }
 
+
     /*
      * =========================================
-     * Messages
+     * Conversation messages
      * =========================================
      */
 
     .message {
-      margin: 28px 0;
-      padding: 20px 22px;
+      position: relative;
+
+      margin: 34px 0;
+
+      padding: 0;
+
+      overflow: visible;
+    }
+
+    .message-label {
+      display: inline-flex;
+
+      align-items: center;
+
+      margin-bottom: 0;
+
+      padding:
+        6px 13px;
+
+      border-radius: 999px;
+
+      font-size: 0.82rem;
+
+      font-weight: 800;
+
+      line-height: 1.4;
+
+      position: relative;
+
+      z-index: 2;
+    }
+
+    .message-content {
+      margin-top: -1px;
+
+      padding:
+        22px 22px 20px;
+
       border-radius: 14px;
 
       overflow-wrap: anywhere;
+
+      line-height: 1.9;
     }
 
+
     /*
-     * User
+     * =========================================
+     * USER
+     * =========================================
      */
 
     .message.user {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-right: 5px solid #3b82f6;
-    }
+      padding-right: 10px;
 
-    /*
-     * Gemini
-     */
-
-    .message.assistant {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-right: 5px solid #22c55e;
-    }
-
-    /*
-     * Label
-     */
-
-    .message-label {
-      display: block;
-
-      margin-bottom: 12px;
-
-      font-size: 0.9rem;
-      font-weight: 800;
-
-      letter-spacing: 0.01em;
+      border-right:
+        5px solid #3b82f6;
     }
 
     .message.user .message-label {
-      color: #2563eb;
+      color: #ffffff;
+
+      background: #2563eb;
+
+      box-shadow:
+        0 2px 6px
+        rgba(37, 99, 235, 0.18);
+    }
+
+    .message.user .message-content {
+      background: #eff6ff;
+
+      border:
+        1px solid #bfdbfe;
+
+      border-radius:
+        0 14px 14px 14px;
+    }
+
+
+    /*
+     * =========================================
+     * GEMINI
+     * =========================================
+     */
+
+    .message.assistant {
+      padding-right: 10px;
+
+      border-right:
+        5px solid #16a34a;
     }
 
     .message.assistant .message-label {
-      color: #16a34a;
+      color: #ffffff;
+
+      background: #16a34a;
+
+      box-shadow:
+        0 2px 6px
+        rgba(22, 163, 74, 0.18);
     }
+
+    .message.assistant .message-content {
+      background: #f0fdf4;
+
+      border:
+        1px solid #bbf7d0;
+
+      border-radius:
+        0 14px 14px 14px;
+    }
+
 
     /*
+     * =========================================
      * Content
+     * =========================================
      */
-
-    .message-content {
-      overflow-wrap: anywhere;
-    }
 
     .message-content > :first-child {
       margin-top: 0;
@@ -977,29 +1191,40 @@ function renderConversationHtml(result) {
     h3,
     h4 {
       line-height: 1.5;
+
       margin-top: 1.5em;
     }
 
     p {
-      margin: 0 0 1em;
+      margin:
+        0 0 1em;
     }
 
     ul,
     ol {
       padding-right: 1.7em;
+
       margin-top: 0.6em;
+
       margin-bottom: 1em;
     }
 
     blockquote {
-      margin: 1em 0;
-      padding: 8px 16px;
-      border-right: 4px solid #d1d5db;
+      margin:
+        1em 0;
+
+      padding:
+        8px 16px;
+
+      border-right:
+        4px solid #d1d5db;
+
       color: #4b5563;
     }
 
     code {
       direction: ltr;
+
       unicode-bidi: embed;
 
       font-family:
@@ -1009,58 +1234,85 @@ function renderConversationHtml(result) {
         monospace;
 
       background: #f3f4f6;
-      padding: 2px 5px;
+
+      padding:
+        2px 5px;
+
       border-radius: 5px;
+
       font-size: 0.9em;
     }
 
     pre {
       direction: ltr;
+
       text-align: left;
+
       overflow-x: auto;
+
       padding: 16px;
-      margin: 18px 0;
+
+      margin:
+        18px 0;
+
       background: #f6f8fa;
+
       border-radius: 10px;
+
       line-height: 1.55;
     }
 
     pre code {
       background: transparent;
+
       padding: 0;
+
       border-radius: 0;
+
       font-size: 0.88rem;
     }
 
     table {
       width: 100%;
+
       border-collapse: collapse;
+
       margin: 20px 0;
+
       overflow-x: auto;
+
       display: block;
     }
 
     th,
     td {
-      border: 1px solid #d1d5db;
-      padding: 8px 12px;
+      border:
+        1px solid #d1d5db;
+
+      padding:
+        8px 12px;
+
       text-align: right;
+
       vertical-align: top;
     }
 
     th {
       background: #f3f4f6;
+
       font-weight: 700;
     }
 
     a {
       color: #2563eb;
+
       text-decoration: none;
     }
 
     a:hover {
       text-decoration: underline;
     }
+
 
     /*
      * =========================================
@@ -1069,30 +1321,64 @@ function renderConversationHtml(result) {
      */
 
     .media {
-      margin: 24px 0 8px;
+      display: block;
+
+      margin:
+        24px 0 6px;
+
+      padding: 10px;
+
       text-align: center;
+
+      background: #ffffff;
+
+      border:
+        1px solid #e5e7eb;
+
+      border-radius: 14px;
     }
 
     .media-image {
       display: block;
-      width: auto;
-      max-width: 100%;
-      height: auto;
-      margin: 16px auto;
-      border-radius: 12px;
-    }
 
-    img {
+      width: auto;
+
       max-width: 100%;
+
       height: auto;
+
+      margin: 0 auto;
+
       border-radius: 10px;
     }
 
-    hr {
-      border: 0;
-      border-top: 1px solid #e5e7eb;
-      margin: 28px 0;
+    .media-video {
+      display: block;
+
+      width: 100%;
+
+      max-width: 100%;
+
+      height: auto;
+
+      margin: 0 auto;
+
+      border-radius: 10px;
     }
+
+    .message-content img {
+      display: block;
+
+      max-width: 100%;
+
+      height: auto;
+
+      margin:
+        20px auto;
+
+      border-radius: 10px;
+    }
+
 
     /*
      * =========================================
@@ -1102,16 +1388,24 @@ function renderConversationHtml(result) {
 
     .math-display {
       direction: ltr;
+
       text-align: center;
+
       overflow-x: auto;
+
       overflow-y: hidden;
+
       margin: 1.4em 0;
-      padding: 0.4em 0;
+
+      padding:
+        0.4em 0;
     }
 
     .math-inline {
       direction: ltr;
+
       unicode-bidi: isolate;
+
       white-space: nowrap;
     }
 
@@ -1121,9 +1415,13 @@ function renderConversationHtml(result) {
 
     .katex-display {
       margin: 0;
+
       overflow-x: auto;
+
       overflow-y: hidden;
-      padding: 4px 0;
+
+      padding:
+        4px 0;
     }
 
   </style>
@@ -1155,8 +1453,6 @@ function renderConversationHtml(result) {
 
     ${messagesHtml}
 
-    ${mediaHtml}
-
   </main>
 
 </article>
@@ -1187,37 +1483,32 @@ function renderMessage(message) {
       : "assistant";
 
   /*
-   * Markdown را آماده می‌کنیم،
-   * ولی فرمول‌ها را قبل از marked جدا می‌کنیم.
+   * Markdown + LaTeX
    */
   const prepared =
     prepareMarkdown(message.text);
 
-  /*
-   * تبدیل Markdown به HTML
-   */
   const html =
     marked.parse(
       prepared.markdown
     );
 
-  /*
-   * جایگزینی placeholderهای ریاضی
-   * با HTML واقعی KaTeX
-   */
   const withMath =
     restoreMath(
       html,
       prepared.math
     );
 
-  /*
-   * پاک‌سازی HTML
-   */
   const safeHtml =
     sanitizeGeneratedHtml(
       withMath
     );
+
+  /*
+   * Media متعلق به همین پیام
+   */
+  const mediaHtml =
+    renderMedia(message.media);
 
   return `
 <section class="message ${className}">
@@ -1227,7 +1518,11 @@ function renderMessage(message) {
   </div>
 
   <div class="message-content">
+
     ${safeHtml}
+
+    ${mediaHtml}
+
   </div>
 
 </section>`;
@@ -1250,9 +1545,7 @@ function renderMedia(media) {
   const unique = [];
   const seen = new Set();
 
-  for (
-    const item of media
-  ) {
+  for (const item of media) {
     if (
       !item ||
       typeof item.url !== "string"
@@ -1273,6 +1566,7 @@ function renderMedia(media) {
     }
 
     seen.add(item.url);
+
     unique.push(item);
   }
 
@@ -1280,43 +1574,50 @@ function renderMedia(media) {
     return "";
   }
 
-  const html =
-    unique
-      .map((item) => {
-        if (
-          item.type === "image"
-        ) {
-          return `
+  return unique
+    .map((item) => {
+      if (
+        item.type === "image"
+      ) {
+        const proxyUrl =
+          `/image?url=${encodeURIComponent(
+            item.url
+          )}`;
+
+        return `
 <div class="media">
+
   <img
     class="media-image"
-    src="${escapeAttribute(item.url)}"
+    src="${escapeAttribute(proxyUrl)}"
     alt="Gemini image"
     loading="lazy"
-    referrerpolicy="no-referrer"
   >
-</div>`;
-        }
 
-        if (
-          item.type === "video"
-        ) {
-          return `
+</div>`;
+      }
+
+      if (
+        item.type === "video"
+      ) {
+        return `
 <div class="media">
+
   <video
-    class="media-image"
+    class="media-video"
     controls
     preload="metadata"
-    src="${escapeAttribute(item.url)}"
+    src="${escapeAttribute(
+      item.url
+    )}"
   ></video>
+
 </div>`;
-        }
+      }
 
-        return "";
-      })
-      .join("\n");
-
-  return html;
+      return "";
+    })
+    .join("\n");
 }
 
 
@@ -1325,28 +1626,14 @@ function renderMedia(media) {
    ========================================================= */
 
 
-/*
- * فرمول‌ها را قبل از Markdown parser
- * جدا می‌کنیم تا marked آن‌ها را خراب نکند.
- *
- * پشتیبانی:
- *
- * $$ ... $$       display math
- *
- * \[ ... \]       display math
- *
- * $ ... $         inline math
- *
- * \( ... \)       inline math
- */
 function prepareMarkdown(markdown) {
   const codeBlocks = [];
   const math = [];
 
   /*
-   * مهم:
-   * Placeholderها نباید از _ یا * یا کاراکترهای
-   * مخصوص Markdown استفاده کنند.
+   * =========================================
+   * Protect code blocks
+   * =========================================
    */
 
   let protectedMarkdown =
@@ -1365,6 +1652,7 @@ function prepareMarkdown(markdown) {
       }
     );
 
+
   /*
    * =========================================
    * Display math: $$ ... $$
@@ -1380,14 +1668,17 @@ function prepareMarkdown(markdown) {
 
         math.push({
           token,
+
           expression:
             expression.trim(),
+
           display: true,
         });
 
         return `\n\n${token}\n\n`;
       }
     );
+
 
   /*
    * =========================================
@@ -1404,14 +1695,17 @@ function prepareMarkdown(markdown) {
 
         math.push({
           token,
+
           expression:
             expression.trim(),
+
           display: true,
         });
 
         return `\n\n${token}\n\n`;
       }
     );
+
 
   /*
    * =========================================
@@ -1428,8 +1722,10 @@ function prepareMarkdown(markdown) {
 
         math.push({
           token,
+
           expression:
             expression.trim(),
+
           display: false,
         });
 
@@ -1437,13 +1733,11 @@ function prepareMarkdown(markdown) {
       }
     );
 
+
   /*
    * =========================================
    * Inline math: $ ... $
    * =========================================
-   *
-   * فقط یک $ در ابتدا و انتها.
-   * $$ قبلاً پردازش شده است.
    */
 
   protectedMarkdown =
@@ -1455,14 +1749,54 @@ function prepareMarkdown(markdown) {
 
         math.push({
           token,
+
           expression:
             expression.trim(),
+
           display: false,
         });
 
         return token;
       }
     );
+
+
+  /*
+   * =========================================
+   * Implicit math:
+   *
+   * e_1
+   * x_2
+   * A_1
+   * B_12
+   *
+   * بدون نیاز به $...$
+   *
+   * این قسمت بعد از محافظت از code blockها
+   * اجرا می‌شود.
+   * =========================================
+   */
+
+  protectedMarkdown =
+    protectedMarkdown.replace(
+      /(?<![A-Za-z0-9\\])([A-Za-z])_([A-Za-z0-9]+)(?![A-Za-z0-9])/g,
+      (_, base, subscript) => {
+        const token =
+          `MATHINLINETOKEN${math.length}X`;
+
+        math.push({
+          token,
+
+          expression:
+            `${base}_{${subscript}}`,
+
+          display: false,
+        });
+
+        return token;
+      }
+    );
+
 
   /*
    * =========================================
@@ -1482,8 +1816,11 @@ function prepareMarkdown(markdown) {
       ""
     );
 
+
   /*
+   * =========================================
    * حذف HTML خام
+   * =========================================
    */
 
   protectedMarkdown =
@@ -1492,9 +1829,13 @@ function prepareMarkdown(markdown) {
       ""
     );
 
+
   /*
    * =========================================
    * Restore code blocks
+   *
+   * این کار عمداً بعد از implicit math انجام
+   * می‌شود تا e_1 داخل code block تبدیل نشود.
    * =========================================
    */
 
@@ -1518,10 +1859,15 @@ function prepareMarkdown(markdown) {
 
 
 /*
- * تبدیل فرمول‌های LaTeX
- * به HTML با KaTeX
+ * =========================================
+ * KaTeX
+ * =========================================
  */
-function restoreMath(html, mathItems) {
+
+function restoreMath(
+  html,
+  mathItems
+) {
   let result = html;
 
   for (
@@ -1547,6 +1893,7 @@ function restoreMath(html, mathItems) {
               "html",
           }
         );
+
     } catch {
       rendered =
         `<code class="${
@@ -1583,8 +1930,11 @@ function sanitizeGeneratedHtml(html) {
   return html
 
     /*
+     * =========================================
      * لینک‌ها
+     * =========================================
      */
+
     .replace(
       /href\s*=\s*["']([^"']*)["']/gi,
       (full, href) => {
@@ -1604,21 +1954,62 @@ function sanitizeGeneratedHtml(html) {
     )
 
     /*
+     * =========================================
      * تصاویر
+     * =========================================
      */
+
     .replace(
       /src\s*=\s*["']([^"']*)["']/gi,
       (full, src) => {
 
+        /*
+         * اگر قبلاً proxy خودمان است،
+         * دوباره proxy نکن.
+         */
+
         if (
-          /^https?:\/\//i.test(src)
+          /^\/image\?url=/i.test(src)
         ) {
           return `src="${escapeAttribute(
             src
           )}"`;
         }
 
-        return 'src=""';
+        /*
+         * URL داخلی معتبر
+         */
+
+        if (
+          src.startsWith("/")
+        ) {
+          return `src="${escapeAttribute(
+            src
+          )}"`;
+        }
+
+        /*
+         * فقط URLهای http/https
+         */
+
+        if (
+          !/^https?:\/\//i.test(src)
+        ) {
+          return 'src=""';
+        }
+
+        /*
+         * Proxy کردن تصویر خارجی
+         */
+
+        const proxyUrl =
+          `/image?url=${encodeURIComponent(
+            src
+          )}`;
+
+        return `src="${escapeAttribute(
+          proxyUrl
+        )}"`;
       }
     );
 }
