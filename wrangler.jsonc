@@ -1,0 +1,17 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "gemini-renderer",
+	"main": "src/index.js",
+	"compatibility_date": "2026-09-22",
+	"browser": {
+		"binding": "BROWSER",
+		"remote": true
+	},
+	"kv_namespaces": [
+		{
+			"binding": "GEMINI_CHATS",
+			"id": "14781cdc95704c16ada422c35c1f9d07",
+			"remote": true
+		}
+	]
+}
