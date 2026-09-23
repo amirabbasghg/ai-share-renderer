@@ -149,25 +149,27 @@ export function prepareMarkdown(markdown) {
    * =========================================
    */
 
-  protectedMarkdown =
-    protectedMarkdown.replace(
-      /(?<![A-Za-z0-9\\])([A-Za-z])_([A-Za-z0-9]+)(?![A-Za-z0-9])/g,
-      (_, base, subscript) => {
-        const token =
-          `MATHINLINETOKEN${math.length}X`;
+ protectedMarkdown =
+  protectedMarkdown.replace(
+    /(?<![A-Za-z0-9\\])([A-Za-z])(?:_([A-Za-z0-9]+)|\^([A-Za-z0-9]+))(?![A-Za-z0-9])/g,
+    (_, base, subscript, superscript) => {
+      const token =
+        `MATHINLINETOKEN${math.length}X`;
 
-        math.push({
-          token,
+      math.push({
+        token,
 
-          expression:
-            `${base}_{${subscript}}`,
+        expression:
+          subscript !== undefined
+            ? `${base}_{${subscript}}`
+            : `${base}^{${superscript}}`,
 
-          display: false,
-        });
+        display: false,
+      });
 
-        return token;
-      }
-    );
+      return token;
+    }
+  );
 
 
   /*
