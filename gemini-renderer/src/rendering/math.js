@@ -377,6 +377,38 @@ function renderCommand(
    * Unknown command:
    * keep its name instead of destroying content.
    */
+
+  if (
+  command === "left" ||
+  command === "right"
+) {
+  return {
+    html: "",
+    next: index,
+  };
+}
+
+if (
+  command === "," ||
+  command === ";" ||
+  command === ":" ||
+  command === "!"
+) {
+  return {
+    html:
+      command === "!"
+        ? ""
+        : " ",
+    next: index,
+  };
+}
+
+if (command === "quad" || command === "qquad") {
+  return {
+    html: " ",
+    next: index,
+  };
+}
   return {
     html:
       escapeHtml(`\\${command}`),
@@ -397,56 +429,58 @@ export function renderExpression(expression) {
      * LaTeX command
      */
     if (char === "\\") {
-      const match =
-        expression
-          .slice(i + 1)
-          .match(
-            /^[A-Za-z]+/
-          );
+  const match =
+    expression.slice(i + 1).match(/^[A-Za-z]+/);
 
-      if (match) {
-        const command =
-          match[0];
+  if (match) {
+    const command = match[0];
+    const commandStart =
+      i + 1 + command.length;
 
-        const commandStart =
-          i + 1 + command.length;
+    const rendered =
+      renderCommand(
+        command,
+        expression,
+        commandStart
+      );
 
-        const rendered =
-          renderCommand(
-            command,
-            expression,
-            commandStart
-          );
+    result += rendered.html;
+    i = rendered.next;
+    continue;
+  }
 
-        result +=
-          rendered.html;
+  const escaped =
+    expression[i + 1];
 
-        i =
-          rendered.next;
+  if (escaped === ",") {
+    result += " ";
+    i += 2;
+    continue;
+  }
 
-        continue;
-      }
+  if (escaped === ";") {
+    result += " ";
+    i += 2;
+    continue;
+  }
 
-      /*
-       * Escaped character:
-       *
-       * \{
-       * \}
-       * \%
-       * \_
-       */
-      if (
-        expression[i + 1]
-      ) {
-        result +=
-          escapeHtml(
-            expression[i + 1]
-          );
+  if (escaped === ":") {
+    result += " ";
+    i += 2;
+    continue;
+  }
 
-        i += 2;
-        continue;
-      }
-    }
+  if (escaped === "!") {
+    i += 2;
+    continue;
+  }
+
+  if (escaped) {
+    result += escapeHtml(escaped);
+    i += 2;
+    continue;
+  }
+}
 
     /*
      * Superscript
@@ -538,6 +572,7 @@ export function restoreMath(
         wrapped
       );
   }
+
 
   return result;
 }
