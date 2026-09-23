@@ -3,38 +3,27 @@ import { nested } from "../utils/nested.js";
 export const RPC_ID = "ujx1Bf";
 export const GEMINI_HOST = "gemini.google.com";
 
-
 export function decodeBatchExecute(text) {
-  for (
-    const rawLine of text.split(/\r?\n/)
-  ) {
-    const line =
-      rawLine.trim();
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
 
-    if (
-      !line.startsWith("[[")
-    ) {
+    if (!line.startsWith("[[")) {
       continue;
     }
 
     let outer;
 
     try {
-      outer =
-        JSON.parse(line);
+      outer = JSON.parse(line);
     } catch {
       continue;
     }
 
-    if (
-      !Array.isArray(outer)
-    ) {
+    if (!Array.isArray(outer)) {
       continue;
     }
 
-    for (
-      const row of outer
-    ) {
+    for (const row of outer) {
       if (
         Array.isArray(row) &&
         row.length >= 3 &&
@@ -58,10 +47,8 @@ export function decodeBatchExecute(text) {
   );
 }
 
-
 export function conversationRoot(payload) {
-  const root =
-    nested(payload, 0);
+  const root = nested(payload, 0);
 
   if (
     !Array.isArray(root) ||
@@ -72,15 +59,57 @@ export function conversationRoot(payload) {
     );
   }
 
-  if (
-    !Array.isArray(
-      nested(root, 1)
-    )
-  ) {
+  if (!Array.isArray(nested(root, 1))) {
     throw new Error(
       "Gemini public share payload contained no turns."
     );
   }
 
   return root;
+}
+
+export async function fetchGeminiRpc(
+  shareId,
+  env
+) {
+  const response = await fetch(
+    env.GEMINI_RPC_PROXY,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        shareId,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Gemini RPC proxy failed: HTTP ${response.status}`
+    );
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(
+      result.error ||
+      "Gemini RPC proxy failed."
+    );
+  }
+
+  if (
+    result.status >= 300 &&
+    result.status < 400
+  ) {
+    throw new Error(
+      `Gemini RPC redirected: HTTP ${result.status} -> ${result.location}`
+    );
+  }
+
+  return decodeBatchExecute(result.body);
 }

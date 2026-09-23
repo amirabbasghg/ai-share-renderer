@@ -18,7 +18,7 @@ export async function handleGemini(url, env) {
      * استخراج مکالمه از Gemini
      */
     const result =
-      await extractGemini(targetUrl);
+      await extractGemini(targetUrl, env);
 
     /*
      * ساخت HTML نهایی
