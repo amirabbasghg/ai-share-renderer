@@ -1,6 +1,7 @@
 import { handleImage } from "./routes/image.js";
 import { handleChat } from "./routes/chat.js";
 import { handleGemini } from "./routes/gemini.js";
+import { handlePdf } from "./routes/pdf.js";
 
 export default {
   async fetch(request, env) {
@@ -16,7 +17,16 @@ export default {
     if (url.pathname === "/image") {
       return handleImage(url);
     }
+/*
+ * =========================================
+ * GET /pdf/{id}
+ * Generate PDF from stored chat
+ * =========================================
+ */
 
+if (url.pathname.startsWith("/pdf/")) {
+  return handlePdf(url, env);
+}
     /*
      * =========================================
      * GET /chat/{id}
