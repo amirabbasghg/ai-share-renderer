@@ -1,4 +1,8 @@
-import { escapeHtml } from "../utils/escape.js";
+import {
+  escapeHtml,
+  escapeAttribute,
+} from "../utils/escape.js";
+
 
 const GREEK = {
   alpha: "α",
@@ -44,64 +48,153 @@ const GREEK = {
   Omega: "Ω",
 };
 
+
 const SYMBOLS = {
   pm: "±",
   mp: "∓",
   times: "×",
   cdot: "·",
   div: "÷",
+
   neq: "≠",
   ne: "≠",
+
   le: "≤",
   leq: "≤",
+
   ge: "≥",
   geq: "≥",
+
   approx: "≈",
   sim: "∼",
   equiv: "≡",
   propto: "∝",
+
   infty: "∞",
   partial: "∂",
   nabla: "∇",
+
   sum: "∑",
   prod: "∏",
   int: "∫",
+
   forall: "∀",
   exists: "∃",
+
   in: "∈",
   notin: "∉",
+
   subset: "⊂",
   subseteq: "⊆",
   supset: "⊃",
   supseteq: "⊇",
- rightarrow: "→",
+
+  rightarrow: "→",
   leftarrow: "←",
   leftrightarrow: "↔",
+
   Rightarrow: "⇒",
   Leftarrow: "⇐",
-  Leftrightarrow: "⇔",
+
+  cdots: "⋯",
+  ldots: "…",
+  dots: "…",
+
+  ast: "∗",
+  star: "⋆",
+
+  cap: "∩",
+  cup: "∪",
+
+  land: "∧",
+  lor: "∨",
+
+  neg: "¬",
+
+  angle: "∠",
+
   degree: "°",
 };
 
-const SUPERSCRIPT = {
-  "0": "⁰",
-  "1": "¹",
-  "2": "²",
-  "3": "³",
-  "4": "⁴",
-  "5": "⁵",
-  "6": "⁶",
-  "7": "⁷",
-  "8": "⁸",
-  "9": "⁹",
-  "+": "⁺",
-  "-": "⁻",
-  "=": "⁼",
-  "(": "⁽",
-  ")": "⁾",
-  n: "ⁿ",
-  i: "ⁱ",
-};
+
+function readGroup(
+  source,
+  start
+) {
+  if (
+    source[start] !== "{"
+  ) {
+    return {
+      value:
+        source[start] || "",
+
+      next:
+        start + 1,
+    };
+  }
+
+  let depth = 0;
+
+  for (
+    let i = start;
+    i < source.length;
+    i++
+  ) {
+    if (
+      source[i] === "{"
+    ) {
+      depth++;
+
+    } else if (
+      source[i] === "}"
+    ) {
+      depth--;
+
+      if (
+        depth === 0
+      ) {
+        return {
+          value:
+            source.slice(
+              start + 1,
+              i
+            ),
+
+          next:
+            i + 1,
+        };
+      }
+    }
+  }
+
+  return {
+    value:
+      source.slice(
+        start + 1
+      ),
+
+    next:
+      source.length,
+  };
+}
+
+
+function toUnicodeScript(
+  value,
+  table
+) {
+  let result = "";
+
+  for (
+    const char of value
+  ) {
+    result +=
+      table[char] || char;
+  }
+
+  return result;
+}
+
 
 const SUBSCRIPT = {
   "0": "₀",
@@ -114,11 +207,11 @@ const SUBSCRIPT = {
   "7": "₇",
   "8": "₈",
   "9": "₉",
+
   "+": "₊",
   "-": "₋",
   "=": "₌",
-  "(": "₍",
-  ")": "₎",
+
   a: "ₐ",
   e: "ₑ",
   h: "ₕ",
@@ -138,132 +231,174 @@ const SUBSCRIPT = {
   x: "ₓ",
 };
 
-function readGroup(source, start) {
-  if (source[start] !== "{") {
-    return {
-      value: source[start] || "",
-      next: start + 1,
-    };
-  }
 
-  let depth = 0;
+const SUPERSCRIPT = {
+  "0": "⁰",
+  "1": "¹",
+  "2": "²",
+  "3": "³",
+  "4": "⁴",
+  "5": "⁵",
+  "6": "⁶",
+  "7": "⁷",
+  "8": "⁸",
+  "9": "⁹",
 
-  for (let i = start; i < source.length; i++) {
-    if (source[i] === "{") {
-      depth++;
-    } else if (source[i] === "}") {
-      depth--;
+  "+": "⁺",
+  "-": "⁻",
+  "=": "⁼",
 
-      if (depth === 0) {
-        return {
-          value: source.slice(start + 1, i),
-          next: i + 1,
-        };
-      }
-    }
-  }
+  a: "ᵃ",
+  b: "ᵇ",
+  c: "ᶜ",
+  d: "ᵈ",
+  e: "ᵉ",
+  f: "ᶠ",
+  g: "ᵍ",
+  h: "ʰ",
+  i: "ⁱ",
+  j: "ʲ",
+  k: "ᵏ",
+  l: "ˡ",
+  m: "ᵐ",
+  n: "ⁿ",
+  o: "ᵒ",
+  p: "ᵖ",
+  r: "ʳ",
+  s: "ˢ",
+  t: "ᵗ",
+  u: "ᵘ",
+  v: "ᵛ",
+  w: "ʷ",
+  x: "ˣ",
+  y: "ʸ",
+  z: "ᶻ",
+};
 
-  return {
-    value: source.slice(start + 1),
-    next: source.length,
-  };
-}
 
-function toUnicodeScript(value, table) {
-  let result = "";
-
-  for (const char of value) {
-    result += table[char] || char;
-  }
-
-  return result;
-}
-
-function renderPlainText(value) {
+function renderPlainText(
+  value
+) {
   let result = "";
   let i = 0;
 
-  while (i < value.length) {
-    const char = value[i];
+  while (
+    i < value.length
+  ) {
+    const char =
+      value[i];
+
 
     /*
      * Superscript
-     *
-     * x^2
-     * x^{12}
      */
-    if (char === "^") {
-      const group = readGroup(
-        value,
-        i + 1
-      );
+
+    if (
+      char === "^"
+    ) {
+      const group =
+        readGroup(
+          value,
+          i + 1
+        );
 
       const rendered =
-        renderExpression(group.value);
+        renderExpression(
+          group.value
+        );
 
       result +=
         `<sup>${rendered}</sup>`;
 
-      i = group.next;
+      i =
+        group.next;
+
       continue;
     }
 
+
     /*
      * Subscript
-     *
-     * x_1
-     * x_{12}
      */
-    if (char === "_") {
-      const group = readGroup(
-        value,
-        i + 1
-      );
+
+    if (
+      char === "_"
+    ) {
+      const group =
+        readGroup(
+          value,
+          i + 1
+        );
 
       const rendered =
-        renderExpression(group.value);
+        renderExpression(
+          group.value
+        );
 
       result +=
         `<sub>${rendered}</sub>`;
 
-      i = group.next;
+      i =
+        group.next;
+
       continue;
     }
 
-    result += escapeHtml(char);
+
+    result +=
+      escapeHtml(char);
+
     i++;
   }
 
   return result;
 }
 
+
 function renderCommand(
   command,
   source,
   index
 ) {
-  if (GREEK[command]) {
+
+  if (
+    GREEK[command]
+  ) {
     return {
       html:
         GREEK[command],
-      next: index,
+
+      next:
+        index,
     };
   }
 
-  if (SYMBOLS[command]) {
+
+  if (
+    SYMBOLS[command]
+  ) {
     return {
       html:
         SYMBOLS[command],
-      next: index,
+
+      next:
+        index,
     };
   }
+
 
   /*
    * \frac{a}{b}
    */
-  if (command === "frac") {
+
+  if (
+    command === "frac"
+  ) {
     const numerator =
-      readGroup(source, index);
+      readGroup(
+        source,
+        index
+      );
 
     const denominator =
       readGroup(
@@ -274,7 +409,7 @@ function renderCommand(
     return {
       html:
         `${renderExpression(numerator.value)}` +
-        `⁄` +
+        "⁄" +
         `${renderExpression(denominator.value)}`,
 
       next:
@@ -282,37 +417,57 @@ function renderCommand(
     };
   }
 
+
   /*
    * \sqrt{x}
-   *
-   * \sqrt[3]{x}
    */
-  if (command === "sqrt") {
-    let next = index;
-    let rootIndex = "";
 
-    if (source[next] === "[") {
+  if (
+    command === "sqrt"
+  ) {
+    let next =
+      index;
+
+    let rootIndex =
+      "";
+
+    if (
+      source[next] === "["
+    ) {
       const end =
-        source.indexOf("]", next);
+        source.indexOf(
+          "]",
+          next
+        );
 
-      if (end !== -1) {
+      if (
+        end !== -1
+      ) {
         rootIndex =
           source.slice(
             next + 1,
             end
           );
 
-        next = end + 1;
+        next =
+          end + 1;
       }
     }
 
     const group =
-      readGroup(source, next);
+      readGroup(
+        source,
+        next
+      );
 
     const content =
-      renderExpression(group.value);
+      renderExpression(
+        group.value
+      );
 
-    if (rootIndex) {
+    if (
+      rootIndex
+    ) {
       return {
         html:
           `<sup>${renderExpression(rootIndex)}</sup>√${content}`,
@@ -331,27 +486,39 @@ function renderCommand(
     };
   }
 
+
   /*
-   * \text{hello}
+   * \text{...}
    */
-  if (command === "text") {
+
+  if (
+    command === "text"
+  ) {
     const group =
-      readGroup(source, index);
+      readGroup(
+        source,
+        index
+      );
 
     return {
       html:
-        escapeHtml(group.value),
+        escapeHtml(
+          group.value
+        ),
 
       next:
         group.next,
     };
   }
 
+
   /*
-   * \mathrm{ABC}
-   * \mathbf{x}
-   * \mathit{x}
+   * \mathrm{}
+   * \mathbf{}
+   * \mathit{}
+   * \operatorname{}
    */
+
   if (
     command === "mathrm" ||
     command === "mathbf" ||
@@ -359,133 +526,213 @@ function renderCommand(
     command === "operatorname"
   ) {
     const group =
-      readGroup(source, index);
-
-    const content =
-      renderExpression(group.value);
+      readGroup(
+        source,
+        index
+      );
 
     return {
       html:
-        content,
+        renderExpression(
+          group.value
+        ),
 
       next:
         group.next,
     };
   }
 
+
   /*
-   * Unknown command:
-   * keep its name instead of destroying content.
+   * \left / \right
    */
 
   if (
-  command === "left" ||
-  command === "right"
-) {
-  return {
-    html: "",
-    next: index,
-  };
-}
+    command === "left" ||
+    command === "right"
+  ) {
+    return {
+      html: "",
+      next:
+        index,
+    };
+  }
 
-if (
-  command === "," ||
-  command === ";" ||
-  command === ":" ||
-  command === "!"
-) {
+
+  /*
+   * spacing
+   */
+
+  if (
+    command === "," ||
+    command === ";" ||
+    command === ":"
+  ) {
+    return {
+      html: " ",
+      next:
+        index,
+    };
+  }
+
+  if (
+    command === "!"
+  ) {
+    return {
+      html: "",
+      next:
+        index,
+    };
+  }
+
+
+  if (
+    command === "quad" ||
+    command === "qquad"
+  ) {
+    return {
+      html: "&nbsp;",
+      next:
+        index,
+    };
+  }
+
+
+  /*
+   * Unknown command
+   */
+
   return {
     html:
-      command === "!"
-        ? ""
-        : " ",
-    next: index,
-  };
-}
-
-if (command === "quad" || command === "qquad") {
-  return {
-    html: " ",
-    next: index,
-  };
-}
-  return {
-    html:
-      escapeHtml(`\\${command}`),
+      `\\${escapeHtml(command)}`,
 
     next:
       index,
   };
 }
 
-export function renderExpression(expression) {
+
+function renderExpression(
+  expression
+) {
   let result = "";
   let i = 0;
 
-  while (i < expression.length) {
-    const char = expression[i];
+  while (
+    i < expression.length
+  ) {
+    const char =
+      expression[i];
+
 
     /*
      * LaTeX command
      */
-    if (char === "\\") {
-  const match =
-    expression.slice(i + 1).match(/^[A-Za-z]+/);
 
-  if (match) {
-    const command = match[0];
-    const commandStart =
-      i + 1 + command.length;
+    if (
+      char === "\\"
+    ) {
+      let j =
+        i + 1;
 
-    const rendered =
-      renderCommand(
-        command,
-        expression,
-        commandStart
-      );
+      while (
+        j < expression.length &&
+        /[A-Za-z]/.test(
+          expression[j]
+        )
+      ) {
+        j++;
+      }
 
-    result += rendered.html;
-    i = rendered.next;
-    continue;
-  }
+      /*
+       * Commands مثل:
+       * \,
+       * \!
+       * \{
+       * \}
+       */
 
-  const escaped =
-    expression[i + 1];
+      if (
+        j === i + 1
+      ) {
+        const escaped =
+          expression[j];
 
-  if (escaped === ",") {
-    result += " ";
-    i += 2;
-    continue;
-  }
+        if (
+          escaped === "{" ||
+          escaped === "}" ||
+          escaped === "[" ||
+          escaped === "]" ||
+          escaped === "(" ||
+          escaped === ")" ||
+          escaped === "|" ||
+          escaped === "\\" 
+        ) {
+          result +=
+            escapeHtml(
+              escaped
+            );
 
-  if (escaped === ";") {
-    result += " ";
-    i += 2;
-    continue;
-  }
+          i += 2;
+          continue;
+        }
 
-  if (escaped === ":") {
-    result += " ";
-    i += 2;
-    continue;
-  }
+        if (
+          escaped === ","
+        ) {
+          result += " ";
+          i += 2;
+          continue;
+        }
 
-  if (escaped === "!") {
-    i += 2;
-    continue;
-  }
+        if (
+          escaped === ";" ||
+          escaped === ":"
+        ) {
+          result += " ";
+          i += 2;
+          continue;
+        }
 
-  if (escaped) {
-    result += escapeHtml(escaped);
-    i += 2;
-    continue;
-  }
-}
+        if (
+          escaped === "!"
+        ) {
+          i += 2;
+          continue;
+        }
+      }
+
+
+      const command =
+        expression.slice(
+          i + 1,
+          j
+        );
+
+      const rendered =
+        renderCommand(
+          command,
+          expression,
+          j
+        );
+
+      result +=
+        rendered.html;
+
+      i =
+        rendered.next;
+
+      continue;
+    }
+
 
     /*
      * Superscript
      */
-    if (char === "^") {
+
+    if (
+      char === "^"
+    ) {
       const group =
         readGroup(
           expression,
@@ -501,10 +748,14 @@ export function renderExpression(expression) {
       continue;
     }
 
+
     /*
      * Subscript
      */
-    if (char === "_") {
+
+    if (
+      char === "_"
+    ) {
       const group =
         readGroup(
           expression,
@@ -520,9 +771,11 @@ export function renderExpression(expression) {
       continue;
     }
 
+
     /*
-     * Ignore LaTeX grouping braces.
+     * Ignore LaTeX braces
      */
+
     if (
       char === "{" ||
       char === "}"
@@ -530,6 +783,7 @@ export function renderExpression(expression) {
       i++;
       continue;
     }
+
 
     result +=
       escapeHtml(char);
@@ -540,13 +794,16 @@ export function renderExpression(expression) {
   return result;
 }
 
+
 export function restoreMath(
   html,
   mathItems
 ) {
   let result = html;
 
-  for (const item of mathItems) {
+  for (
+    const item of mathItems
+  ) {
     let rendered;
 
     try {
@@ -554,6 +811,7 @@ export function restoreMath(
         renderExpression(
           item.expression
         );
+
     } catch {
       rendered =
         escapeHtml(
@@ -561,10 +819,26 @@ export function restoreMath(
         );
     }
 
+
+    /*
+     * LaTeX اصلی را نگه می‌داریم
+     * تا PDF بتواند آن را دوباره
+     * با KaTeX/MathML رندر کند.
+     */
+
+    const encodedLatex =
+      encodeURIComponent(
+        item.expression
+      );
+
+
     const wrapped =
       item.display
-        ? `<div class="math-display">${rendered}</div>`
-        : `<span class="math-inline">${rendered}</span>`;
+
+        ? `<div class="math-display" data-latex="${escapeAttribute(encodedLatex)}">${rendered}</div>`
+
+        : `<span class="math-inline" data-latex="${escapeAttribute(encodedLatex)}">${rendered}</span>`;
+
 
     result =
       result.replaceAll(
@@ -572,7 +846,6 @@ export function restoreMath(
         wrapped
       );
   }
-
 
   return result;
 }

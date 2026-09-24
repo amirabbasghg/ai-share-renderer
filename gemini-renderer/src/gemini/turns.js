@@ -53,36 +53,10 @@ export function extractTurns(root) {
         nested(turn, 4)
       );
 
-    /*
-     * =========================================
-     * Media متعلق به همین turn
-     * =========================================
-     */
-
-    const turnMedia = [];
-    const seenTurnMedia = new Set();
-
-    for (
-      const item of mediaFromValue(turn)
-    ) {
-      if (
-        !seenTurnMedia.has(item.url)
-      ) {
-        seenTurnMedia.add(item.url);
-        turnMedia.push(item);
-      }
-
-      if (
-        !seenMedia.has(item.url)
-      ) {
-        seenMedia.add(item.url);
-        media.push(item);
-      }
-    }
 
     /*
      * =========================================
-     * User
+     * User prompt
      * =========================================
      */
 
@@ -94,7 +68,47 @@ export function extractTurns(root) {
         nested(prompt, 0)
       );
 
-    if (userText) {
+    /*
+     * عکس‌های مربوط به User
+     *
+     * قبلاً کل turn را اسکن می‌کردیم و
+     * عکس User اشتباهاً به Gemini می‌رسید.
+     *
+     * الان فقط prompt را بررسی می‌کنیم.
+     */
+
+    const userMedia = [];
+    const seenUserMedia = new Set();
+
+    for (
+      const item of mediaFromValue(prompt)
+    ) {
+      if (
+        !seenUserMedia.has(item.url)
+      ) {
+        seenUserMedia.add(item.url);
+        userMedia.push(item);
+      }
+
+      if (
+        !seenMedia.has(item.url)
+      ) {
+        seenMedia.add(item.url);
+        media.push(item);
+      }
+    }
+
+
+    /*
+     * =========================================
+     * User message
+     * =========================================
+     */
+
+    if (
+      userText ||
+      userMedia.length > 0
+    ) {
       messages.push({
         role: "user",
 
@@ -103,13 +117,15 @@ export function extractTurns(root) {
 
         createdAt,
 
-        media: [],
+        media:
+          userMedia,
       });
     }
 
+
     /*
      * =========================================
-     * Gemini
+     * Gemini response
      * =========================================
      */
 
@@ -121,7 +137,44 @@ export function extractTurns(root) {
         response
       );
 
-    if (assistantText) {
+
+    /*
+     * فقط response را برای
+     * عکس‌های Gemini بررسی می‌کنیم.
+     */
+
+    const assistantMedia = [];
+    const seenAssistantMedia = new Set();
+
+    for (
+      const item of mediaFromValue(response)
+    ) {
+      if (
+        !seenAssistantMedia.has(item.url)
+      ) {
+        seenAssistantMedia.add(item.url);
+        assistantMedia.push(item);
+      }
+
+      if (
+        !seenMedia.has(item.url)
+      ) {
+        seenMedia.add(item.url);
+        media.push(item);
+      }
+    }
+
+
+    /*
+     * =========================================
+     * Gemini message
+     * =========================================
+     */
+
+    if (
+      assistantText ||
+      assistantMedia.length > 0
+    ) {
       messages.push({
         role: "assistant",
 
@@ -132,35 +185,21 @@ export function extractTurns(root) {
 
         createdAt,
 
-        /*
-         * عکس‌های همین turn
-         * داخل خود پیام Gemini قرار می‌گیرند.
-         */
         media:
-          turnMedia,
+          assistantMedia,
       });
-    } else if (
-      turnMedia.length > 0 &&
-      userText
-    ) {
-      /*
-       * اگر پاسخ متنی Gemini نداشت،
-       * عکس را به User متصل می‌کنیم.
-       */
-      const lastMessage =
-        messages[messages.length - 1];
-
-      if (
-        lastMessage &&
-        lastMessage.role === "user"
-      ) {
-        lastMessage.media =
-          turnMedia;
-      }
     }
 
+
+    /*
+     * =========================================
+     * Metadata
+     * =========================================
+     */
+
     turnMetadata.push({
-      index: turnIndex,
+      index:
+        turnIndex,
 
       conversationId,
 
@@ -168,14 +207,19 @@ export function extractTurns(root) {
 
       createdAt,
 
-      media:
-        turnMedia,
+      media: [
+        ...userMedia,
+        ...assistantMedia,
+      ],
     });
   }
 
+
   return {
     messages,
+
     turnMetadata,
+
     media,
   };
 }
@@ -250,7 +294,7 @@ function joinTextParts(value) {
 
 
 function cleanText(value) {
-  return value
+  return String(value || "")
     .replace(/\u200b/g, "")
     .trim();
 }
@@ -290,6 +334,7 @@ function timestamp(value) {
     return new Date(
       milliseconds
     ).toISOString();
+
   } catch {
     return null;
   }
