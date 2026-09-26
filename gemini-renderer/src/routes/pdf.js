@@ -28,13 +28,23 @@ function renderLatexForPdf(
       }
 
 
+      const isInline =
+        tag === "span";
+
+
       try {
+        /*
+         * اگر KaTeX خطا بدهد، به fallback
+         * خودمان برمی‌گردیم و اجازه نمی‌دهیم
+         * KaTeX خروجی قرمز تولید کند.
+         */
+
         const mathml =
           katex.renderToString(
             latex,
             {
               throwOnError:
-                false,
+                true,
 
               strict:
                 false,
@@ -43,18 +53,90 @@ function renderLatexForPdf(
                 "mathml",
 
               displayMode:
-                tag === "div",
+                !isInline,
             }
           );
 
+
+        /*
+         * Inline:
+         *
+         * نباید وسط جمله به خط بعد
+         * منتقل شود یا چند خطی شود.
+         */
+
+        if (isInline) {
+          return `
+<span
+  class="pdf-math-inline"
+  style="
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: middle;
+  "
+>
+  ${mathml}
+</span>
+`;
+        }
+
+
+        /*
+         * Display math:
+         *
+         * همچنان به صورت یک بلوک
+         * جدا نمایش داده شود.
+         */
+
         return `
-<div class="pdf-math">
+<div
+  class="pdf-math-display"
+  style="
+    display: block;
+    text-align: center;
+    margin: 0.5em 0;
+  "
+>
   ${mathml}
 </div>
 `;
+
       } catch {
+
+        /*
+         * اگر LaTeX توسط KaTeX پشتیبانی نشد،
+         * همان خروجی semantic renderer خودمان
+         * را نگه می‌داریم.
+         *
+         * مهم:
+         * اینجا دیگر خروجی قرمز KaTeX نداریم.
+         */
+
+        if (isInline) {
+          return `
+<span
+  class="pdf-math-inline"
+  style="
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: middle;
+  "
+>
+  ${fallback}
+</span>
+`;
+        }
+
+
         return `
-<div class="pdf-math">
+<div
+  class="pdf-math-display"
+  style="
+    display: block;
+    text-align: center;
+    margin: 0.5em 0;
+  "
+>
   ${fallback}
 </div>
 `;
@@ -145,9 +227,11 @@ async function waitForImages(
           document.images
         );
 
+
       await Promise.all(
         images.map(
           (image) => {
+
             if (
               image.complete &&
               image.naturalWidth > 0
@@ -155,8 +239,10 @@ async function waitForImages(
               return Promise.resolve();
             }
 
+
             return new Promise(
               (resolve) => {
+
                 const done =
                   () => {
                     image.removeEventListener(
@@ -172,10 +258,12 @@ async function waitForImages(
                     resolve();
                   };
 
+
                 image.addEventListener(
                   "load",
                   done
                 );
+
 
                 image.addEventListener(
                   "error",
@@ -233,6 +321,7 @@ export async function handlePdf(
 
 
   try {
+
     browser =
       await puppeteer.launch(
         env.BROWSER
@@ -280,8 +369,8 @@ export async function handlePdf(
 
 
     /*
-     * یک frame دیگر برای
-     * تکمیل rendering مرورگر
+     * دو frame برای تکمیل
+     * rendering مرورگر
      */
 
     await page.evaluate(
