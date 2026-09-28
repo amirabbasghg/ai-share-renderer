@@ -52,6 +52,19 @@ export function sanitizeGeneratedHtml(html) {
         }
 
         /*
+         * URLهای data: (SVG/PNG inline مثل placeholder)
+         * باید دست‌نخورده بمانند.
+         */
+
+        if (
+          /^data:image\//i.test(src)
+        ) {
+          return `src="${escapeAttribute(
+            src
+          )}"`;
+        }
+
+        /*
          * URL داخلی معتبر
          */
 

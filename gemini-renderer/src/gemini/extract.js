@@ -6,6 +6,34 @@ import {
 import { extractTurns } from "./turns.js";
 import { nested, safeString } from "../utils/nested.js";
 
+
+/*
+ * تصاویر lmdx که Gemini فقط با host برهنهٔ
+ * googleusercontent.com برمی‌گرداند، عملاً هیچ‌وقت سرو
+ * نمی‌شوند (۴۰۴). اینها را از همان ابتدا علامت می‌زنیم تا
+ * رندرکننده به‌جای لینک شکستنی، placeholder inline بگذارد.
+ */
+
+const NEVER_SERVED_LMDX_HOSTS = [
+  "googleusercontent.com",
+  "www.googleusercontent.com",
+];
+
+function isNeverServedLmdx(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+
+    return (
+      NEVER_SERVED_LMDX_HOSTS.includes(
+        parsed.hostname.toLowerCase()
+      ) &&
+      /^\/lmdx_[a-z]+\//i.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function extractGemini(sourceUrl, env) {
   const {
     shareId,
@@ -20,6 +48,36 @@ export async function extractGemini(sourceUrl, env) {
 
   const conversation =
     extractTurns(root);
+
+  /*
+   * علامت‌گذاری تصاویری که هیچ‌وقت سرو نمی‌شوند
+   * (lmdx با host برهنه) تا رندرکننده به‌جای لینک
+   * شکستنی، placeholder inline استفاده کند.
+   */
+
+  for (const message of conversation.messages) {
+    if (!Array.isArray(message.media)) {
+      continue;
+    }
+
+    for (const item of message.media) {
+      if (
+        item.type === "image" &&
+        isNeverServedLmdx(item.url)
+      ) {
+        item.unavailable = true;
+      }
+    }
+  }
+
+  for (const item of conversation.media) {
+    if (
+      item.type === "image" &&
+      isNeverServedLmdx(item.url)
+    ) {
+      item.unavailable = true;
+    }
+  }
 
   if (
     conversation.messages.length === 0

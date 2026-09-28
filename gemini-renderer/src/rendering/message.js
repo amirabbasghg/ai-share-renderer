@@ -4,6 +4,25 @@ import { restoreMath } from "./math.js";
 import { sanitizeGeneratedHtml } from "./sanitize.js";
 import { escapeAttribute } from "../utils/escape.js";
 
+
+/*
+ * placeholder inline (data URI) برای تصاویری که منبعشان
+ * در دسترس نیست. چون data URI است:
+ *
+ * - PDF بدون معطلی ساخته می‌شود (fetch شبکه لازم ندارد)
+ * - Instant View تصویر «ناقص» نخواهد داشت و ساخته می‌شود
+ */
+
+export const MEDIA_PLACEHOLDER_DATA_URI =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">` +
+    `<rect width="100%" height="100%" fill="#f1f3f4"/>` +
+    `<text x="50%" y="50%" fill="#9aa0a6" font-family="sans-serif" ` +
+    `font-size="20" text-anchor="middle" dominant-baseline="middle">` +
+    `تصویر در دسترس نیست</text></svg>`
+  );
+
 marked.setOptions({
   gfm: true,
   breaks: false,
@@ -116,17 +135,26 @@ export function renderMedia(media) {
       if (
         item.type === "image"
       ) {
-        const proxyUrl =
-          `/image?url=${encodeURIComponent(
-            item.url
-          )}`;
+        /*
+         * اگر تصویر از قبل شکست‌خورده شناخته شده
+         * (item.unavailable)، مستقیم placeholder
+         * inline می‌گذاریم تا PDF و Instant View
+         * منتظر fetch شبکه نمانند.
+         */
+
+        const src =
+          item.unavailable
+            ? MEDIA_PLACEHOLDER_DATA_URI
+            : `/image?url=${encodeURIComponent(
+                item.url
+              )}`;
 
         return `
 <div class="media">
 
   <img
     class="media-image"
-    src="${escapeAttribute(proxyUrl)}"
+    src="${escapeAttribute(src)}"
     alt="Gemini image"
     loading="lazy"
   >

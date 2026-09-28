@@ -1,4 +1,4 @@
-import { mediaFromValue } from "./media.js";
+import { mediaFromValue, normalizeMediaUrl } from "./media.js";
 import { nested, safeString } from "../utils/nested.js";
 
 
@@ -83,18 +83,28 @@ export function extractTurns(root) {
     for (
       const item of mediaFromValue(prompt)
     ) {
+      /*
+       * URLهای ناقص lmdx را همان اینجا اصلاح می‌کنیم
+       * تا در HTML و JSON خروجی، آدرس قابل‌fetch باشد.
+       */
+
+      const fixedItem = {
+        ...item,
+        url: normalizeMediaUrl(item.url),
+      };
+
       if (
-        !seenUserMedia.has(item.url)
+        !seenUserMedia.has(fixedItem.url)
       ) {
-        seenUserMedia.add(item.url);
-        userMedia.push(item);
+        seenUserMedia.add(fixedItem.url);
+        userMedia.push(fixedItem);
       }
 
       if (
-        !seenMedia.has(item.url)
+        !seenMedia.has(fixedItem.url)
       ) {
-        seenMedia.add(item.url);
-        media.push(item);
+        seenMedia.add(fixedItem.url);
+        media.push(fixedItem);
       }
     }
 
@@ -149,18 +159,23 @@ export function extractTurns(root) {
     for (
       const item of mediaFromValue(response)
     ) {
+      const fixedItem = {
+        ...item,
+        url: normalizeMediaUrl(item.url),
+      };
+
       if (
-        !seenAssistantMedia.has(item.url)
+        !seenAssistantMedia.has(fixedItem.url)
       ) {
-        seenAssistantMedia.add(item.url);
-        assistantMedia.push(item);
+        seenAssistantMedia.add(fixedItem.url);
+        assistantMedia.push(fixedItem);
       }
 
       if (
-        !seenMedia.has(item.url)
+        !seenMedia.has(fixedItem.url)
       ) {
-        seenMedia.add(item.url);
-        media.push(item);
+        seenMedia.add(fixedItem.url);
+        media.push(fixedItem);
       }
     }
 

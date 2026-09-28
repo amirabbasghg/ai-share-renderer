@@ -497,6 +497,20 @@ export function renderConversationHtml(result) {
         4px 0;
     }
 
+
+    /*
+     * =========================================
+     * Telegram Instant View helpers
+     * =========================================
+     *
+     * این کلاس فقط برای template اینستنت‌ویو استفاده
+     * می‌شود تا در صورت نبودِ cover، bot خطا نگیرد.
+     */
+
+    .iv-cover {
+      display: none;
+    }
+
   </style>
 
 </head>
