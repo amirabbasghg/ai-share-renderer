@@ -369,13 +369,17 @@ export async function handlePdf(
 
 
     /*
-     * دو frame برای تکمیل
-     * rendering مرورگر
+     * اطمینان از بارگیری کامل فونت‌ها
+     * و دو frame برای تکمیل rendering
      */
 
     await page.evaluate(
-      () =>
-        new Promise(
+      async () => {
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        await new Promise(
           (resolve) =>
             requestAnimationFrame(
               () =>
@@ -383,7 +387,8 @@ export async function handlePdf(
                   resolve
                 )
             )
-        )
+        );
+      }
     );
 
 

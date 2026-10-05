@@ -2,11 +2,12 @@
   "name": "gemini-renderer",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "test": "vitest"
+    "test": "node --test test/render.test.js"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.0.0",
