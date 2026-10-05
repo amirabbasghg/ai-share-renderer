@@ -388,6 +388,158 @@ function renderCommand(
 
 
   /*
+   * \begin{env} ... \end{env}
+   */
+
+  if (
+    command === "begin"
+  ) {
+    const envGroup =
+      readGroup(
+        source,
+        index
+      );
+
+    const envName =
+      envGroup.value.trim();
+
+    let nextIndex =
+      envGroup.next;
+
+
+    const endTag =
+      `\\end{${envName}}`;
+
+    const endPos =
+      source.indexOf(
+        endTag,
+        nextIndex
+      );
+
+
+    if (
+      endPos !== -1
+    ) {
+      const body =
+        source.slice(
+          nextIndex,
+          endPos
+        );
+
+      nextIndex =
+        endPos +
+        endTag.length;
+
+
+      const isMatrix =
+        envName === "bmatrix" ||
+        envName === "pmatrix" ||
+        envName === "matrix" ||
+        envName === "vmatrix" ||
+        envName === "Vmatrix" ||
+        envName === "array" ||
+        envName === "align" ||
+        envName === "align*" ||
+        envName === "equation" ||
+        envName === "equation*";
+
+
+      if (isMatrix) {
+        const rows =
+          body
+            .split(/\\\\|\\cr/)
+            .map((row) =>
+              row
+                .split("&")
+                .map((cell) =>
+                  renderExpression(
+                    cell.trim()
+                  )
+                )
+            );
+
+
+        const rowsHtml =
+          rows
+            .map(
+              (row) =>
+                `<tr>${row
+                  .map(
+                    (cell) =>
+                      `<td style="padding: 2px 6px; text-align: center;">${cell}</td>`
+                  )
+                  .join("")}</tr>`
+            )
+            .join("");
+
+
+        let openBracket = "";
+        let closeBracket = "";
+
+
+        if (
+          envName === "bmatrix"
+        ) {
+          openBracket =
+            '<span style="font-size: 1.3em; margin-right: 2px; font-weight: 300;">[</span>';
+
+          closeBracket =
+            '<span style="font-size: 1.3em; margin-left: 2px; font-weight: 300;">]</span>';
+
+        } else if (
+          envName === "pmatrix"
+        ) {
+          openBracket =
+            '<span style="font-size: 1.3em; margin-right: 2px;">(</span>';
+
+          closeBracket =
+            '<span style="font-size: 1.3em; margin-left: 2px;">)</span>';
+
+        } else if (
+          envName === "vmatrix"
+        ) {
+          openBracket =
+            '<span style="font-size: 1.3em; margin-right: 2px;">|</span>';
+
+          closeBracket =
+            '<span style="font-size: 1.3em; margin-left: 2px;">|</span>';
+        }
+
+
+        const tableHtml =
+          `<table style="display: inline-table; vertical-align: middle; border-collapse: collapse; margin: 0 4px;">${rowsHtml}</table>`;
+
+
+        return {
+          html:
+            `<div style="display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">${openBracket}${tableHtml}${closeBracket}</div>`,
+
+          next:
+            nextIndex,
+        };
+      }
+    }
+  }
+
+
+  if (
+    command === "end"
+  ) {
+    const group =
+      readGroup(
+        source,
+        index
+      );
+
+    return {
+      html: "",
+      next:
+        group.next,
+    };
+  }
+
+
+  /*
    * \frac{a}{b}
    */
 
@@ -773,11 +925,30 @@ function renderExpression(
 
 
     /*
-     * Ignore LaTeX braces
+     * LaTeX braces {...}
      */
 
     if (
-      char === "{" ||
+      char === "{"
+    ) {
+      const group =
+        readGroup(
+          expression,
+          i
+        );
+
+      result +=
+        renderExpression(
+          group.value
+        );
+
+      i =
+        group.next;
+
+      continue;
+    }
+
+    if (
       char === "}"
     ) {
       i++;

@@ -54,6 +54,34 @@ export function prepareMarkdown(markdown) {
 
   /*
    * =========================================
+   * Display math environments:
+   * \begin{bmatrix} ... \end{bmatrix}
+   * =========================================
+   */
+
+  protectedMarkdown =
+    protectedMarkdown.replace(
+      /\\begin\{([a-zA-Z0-9*]+)\}([\s\S]*?)\\end\{\1\}/g,
+      (fullMatch) => {
+        const token =
+          `MATHDISPLAYTOKEN${math.length}X`;
+
+        math.push({
+          token,
+
+          expression:
+            fullMatch.trim(),
+
+          display: true,
+        });
+
+        return `\n\n${token}\n\n`;
+      }
+    );
+
+
+  /*
+   * =========================================
    * Display math: \[ ... \]
    * =========================================
    */

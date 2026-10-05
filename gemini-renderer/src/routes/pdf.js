@@ -44,13 +44,13 @@ function renderLatexForPdf(
             latex,
             {
               throwOnError:
-                true,
+                false,
 
               strict:
                 false,
 
               output:
-                "mathml",
+                "htmlAndMathml",
 
               displayMode:
                 !isInline,
