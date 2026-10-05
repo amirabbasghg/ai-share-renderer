@@ -612,6 +612,81 @@ function renderCommand(
 }
 
 
+const MATRIX_BRACKETS = {
+  bmatrix: ["[", "]"],
+  pmatrix: ["(", ")"],
+  Bmatrix: ["{", "}"],
+  vmatrix: ["|", "|"],
+  Vmatrix: ["‖", "‖"],
+  matrix: ["", ""],
+  smallmatrix: ["", ""],
+  array: ["", ""],
+  cases: ["{", ""],
+};
+
+
+function renderMatrix(
+  env,
+  body
+) {
+  let content = body;
+
+  // \begin{array}{cc} column spec
+  if (
+    env === "array" &&
+    content.trimStart().startsWith("{")
+  ) {
+    content =
+      content.slice(
+        readGroup(
+          content,
+          content.indexOf("{")
+        ).next
+      );
+  }
+
+  const [open, close] =
+    MATRIX_BRACKETS[env] ||
+    ["", ""];
+
+  const rows =
+    content
+      .split(/\\\\/)
+      .map((row) => row.trim())
+      .filter((row) => row !== "");
+
+  const table =
+    rows
+      .map((row) =>
+        "<tr>" +
+        row
+          .split("&")
+          .map(
+            (cell) =>
+              `<td style="padding:0 .5em;text-align:center">${renderExpression(cell.trim())}</td>`
+          )
+          .join("") +
+        "</tr>"
+      )
+      .join("");
+
+  const bracketStyle =
+    "font-size:2.2em;font-weight:200;line-height:1;vertical-align:middle;";
+
+  return (
+    `<span style="display:inline-flex;align-items:center;vertical-align:middle;direction:ltr">` +
+    (open
+      ? `<span style="${bracketStyle}">${escapeHtml(open)}</span>`
+      : "") +
+    `<table style="display:inline-table;border-collapse:collapse"><tbody>${table}</tbody></table>` +
+    (close
+      ? `<span style="${bracketStyle}">${escapeHtml(close)}</span>`
+      : "") +
+    `</span>`
+  );
+}
+
+
 function renderExpression(
   expression
 ) {
@@ -657,6 +732,22 @@ function renderExpression(
       ) {
         const escaped =
           expression[j];
+
+        if (
+          escaped === "_" ||
+          escaped === "%" ||
+          escaped === "$" ||
+          escaped === "&" ||
+          escaped === "#"
+        ) {
+          result +=
+            escapeHtml(
+              escaped
+            );
+
+          i += 2;
+          continue;
+        }
 
         if (
           escaped === "{" ||
@@ -708,6 +799,48 @@ function renderExpression(
           i + 1,
           j
         );
+
+      /*
+       * \begin{bmatrix} ... \end{bmatrix}
+       */
+
+      if (
+        command === "begin"
+      ) {
+        const env =
+          readGroup(
+            expression,
+            j
+          );
+
+        const endTag =
+          `\\end{${env.value}}`;
+
+        const endIndex =
+          expression.indexOf(
+            endTag,
+            env.next
+          );
+
+        if (
+          endIndex !== -1
+        ) {
+          result +=
+            renderMatrix(
+              env.value,
+              expression.slice(
+                env.next,
+                endIndex
+              )
+            );
+
+          i =
+            endIndex +
+            endTag.length;
+
+          continue;
+        }
+      }
 
       const rendered =
         renderCommand(
