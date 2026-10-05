@@ -108,7 +108,7 @@ export function renderConversationHtml(result) {
         Roboto,
         sans-serif;
 
-      line-height: 1.85;
+      line-height: 1.6;
 
       font-weight: 400;
     }
@@ -162,7 +162,7 @@ export function renderConversationHtml(result) {
     .message {
       position: relative;
 
-      margin: 34px 0;
+      margin: 20px 0;
 
       padding: 0;
 
@@ -196,13 +196,13 @@ export function renderConversationHtml(result) {
       margin-top: -1px;
 
       padding:
-        22px 22px 20px;
+        16px 18px 14px;
 
       border-radius: 14px;
 
       overflow-wrap: anywhere;
 
-      line-height: 1.9;
+      line-height: 1.6;
     }
 
 
@@ -298,16 +298,16 @@ export function renderConversationHtml(result) {
 
     p {
       margin:
-        0 0 1em;
+        0 0 0.6em;
     }
 
     ul,
     ol {
       padding-right: 1.7em;
 
-      margin-top: 0.6em;
+      margin-top: 0.4em;
 
-      margin-bottom: 1em;
+      margin-bottom: 0.6em;
     }
 
     blockquote {
@@ -550,10 +550,24 @@ export function renderConversationHtml(result) {
         print-color-adjust: exact;
       }
 
-      .message,
+      .message {
+        margin: 20px 0;
+
+        break-inside: auto;
+
+        page-break-inside: auto;
+      }
+
+      .message-label {
+        break-after: avoid;
+
+        page-break-after: avoid;
+      }
+
       pre,
       blockquote,
       table,
+      tr,
       .media,
       .pdf-math-display {
         break-inside: avoid;
