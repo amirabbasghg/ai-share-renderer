@@ -57,7 +57,25 @@ export function renderConversationHtml(result) {
     content="${canonicalUrl}"
   >
 
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+
   <style>
+
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap');
 
     * {
       box-sizing: border-box;
@@ -65,6 +83,12 @@ export function renderConversationHtml(result) {
 
     html {
       background: #ffffff;
+
+      -webkit-font-smoothing: antialiased;
+
+      -moz-osx-font-smoothing: grayscale;
+
+      text-rendering: optimizeLegibility;
     }
 
     body {
@@ -73,16 +97,20 @@ export function renderConversationHtml(result) {
 
       background: #ffffff;
 
-      color: #202124;
+      color: #1f2937;
 
       font-family:
+        "Vazirmatn",
         system-ui,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
+        Roboto,
         sans-serif;
 
-      line-height: 1.8;
+      line-height: 1.6;
+
+      font-weight: 400;
     }
 
     article {
@@ -134,7 +162,7 @@ export function renderConversationHtml(result) {
     .message {
       position: relative;
 
-      margin: 34px 0;
+      margin: 20px 0;
 
       padding: 0;
 
@@ -168,13 +196,13 @@ export function renderConversationHtml(result) {
       margin-top: -1px;
 
       padding:
-        22px 22px 20px;
+        16px 18px 14px;
 
       border-radius: 14px;
 
       overflow-wrap: anywhere;
 
-      line-height: 1.9;
+      line-height: 1.6;
     }
 
 
@@ -270,16 +298,16 @@ export function renderConversationHtml(result) {
 
     p {
       margin:
-        0 0 1em;
+        0 0 0.6em;
     }
 
     ul,
     ol {
       padding-right: 1.7em;
 
-      margin-top: 0.6em;
+      margin-top: 0.4em;
 
-      margin-bottom: 1em;
+      margin-bottom: 0.6em;
     }
 
     blockquote {
@@ -301,15 +329,16 @@ export function renderConversationHtml(result) {
       unicode-bidi: embed;
 
       font-family:
-        "Cascadia Code",
         "Fira Code",
+        "Cascadia Code",
         Consolas,
+        Monaco,
         monospace;
 
       background: #f3f4f6;
 
       padding:
-        2px 5px;
+        2px 6px;
 
       border-radius: 5px;
 
@@ -328,11 +357,14 @@ export function renderConversationHtml(result) {
       margin:
         18px 0;
 
-      background: #f6f8fa;
+      background: #f8fafc;
+
+      border:
+        1px solid #e2e8f0;
 
       border-radius: 10px;
 
-      line-height: 1.55;
+      line-height: 1.6;
     }
 
     pre code {
@@ -343,6 +375,13 @@ export function renderConversationHtml(result) {
       border-radius: 0;
 
       font-size: 0.88rem;
+
+      font-family:
+        "Fira Code",
+        "Cascadia Code",
+        Consolas,
+        Monaco,
+        monospace;
     }
 
     table {
@@ -495,6 +534,55 @@ export function renderConversationHtml(result) {
 
       padding:
         4px 0;
+    }
+
+
+    /*
+     * =========================================
+     * Print / PDF
+     * =========================================
+     */
+
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+
+        print-color-adjust: exact;
+      }
+
+      .message {
+        margin: 20px 0;
+
+        break-inside: auto;
+
+        page-break-inside: auto;
+      }
+
+      .message-label {
+        break-after: avoid;
+
+        page-break-after: avoid;
+      }
+
+      pre,
+      blockquote,
+      table,
+      tr,
+      .media,
+      .pdf-math-display {
+        break-inside: avoid;
+
+        page-break-inside: avoid;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        break-after: avoid;
+
+        page-break-after: avoid;
+      }
     }
 
   </style>
