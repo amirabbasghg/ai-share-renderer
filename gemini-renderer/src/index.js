@@ -2,6 +2,7 @@ import { handleImage } from "./routes/image.js";
 import { handleChat } from "./routes/chat.js";
 import { handleGemini } from "./routes/gemini.js";
 import { handlePdf } from "./routes/pdf.js";
+import { handleRender } from "./routes/render.js";
 
 export default {
   async fetch(request, env) {
@@ -27,6 +28,13 @@ export default {
 if (url.pathname.startsWith("/pdf/")) {
   return handlePdf(url, env);
 }
+    /*
+     * POST /render  (used by the Telegram bot)
+     */
+    if (url.pathname === "/render") {
+      return handleRender(request, env);
+    }
+
     /*
      * =========================================
      * GET /chat/{id}
