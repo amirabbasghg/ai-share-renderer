@@ -2,6 +2,7 @@ import { handleImage } from "./routes/image.js";
 import { handleChat } from "./routes/chat.js";
 import { handleGemini } from "./routes/gemini.js";
 import { handlePdf } from "./routes/pdf.js";
+import { handleRender } from "./routes/render.js";
 
 export default {
   async fetch(request, env) {
@@ -9,24 +10,35 @@ export default {
 
     /*
      * =========================================
+     * POST /render
+     * Render custom turns / transcripts (Bearer RENDER_TOKEN)
+     * =========================================
+     */
+
+    if (url.pathname === "/render") {
+      return handleRender(request, url, env);
+    }
+
+    /*
+     * =========================================
      * GET /image?url=...
-     * Proxy Gemini images
+     * Proxy conversation images
      * =========================================
      */
 
     if (url.pathname === "/image") {
       return handleImage(url);
     }
-/*
- * =========================================
- * GET /pdf/{id}
- * Generate PDF from stored chat
- * =========================================
- */
+    /*
+     * =========================================
+     * GET /pdf/{id}
+     * Generate PDF from stored chat
+     * =========================================
+     */
 
-if (url.pathname.startsWith("/pdf/")) {
-  return handlePdf(url, env);
-}
+    if (url.pathname.startsWith("/pdf/")) {
+      return handlePdf(url, env, request);
+    }
     /*
      * =========================================
      * GET /chat/{id}

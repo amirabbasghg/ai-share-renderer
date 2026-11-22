@@ -1,0 +1,17 @@
+{
+  "name": "gemini-renderer-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node --check server.js && node --check gemini-renderer/src/index.js",
+    "lint": "node --check server.js && node --check gemini-renderer/src/index.js && node --check gemini-renderer/src/routes/gemini.js && node --check gemini-renderer/src/routes/chat.js && node --check gemini-renderer/src/routes/image.js && node --check gemini-renderer/src/routes/pdf.js && node --check gemini-renderer/src/routes/render.js && node --check gemini-renderer/src/chatgpt/resolveShare.js && node --check gemini-renderer/src/chatgpt/parse.js && node --check gemini-renderer/src/chatgpt/extract.js && node --check gemini-rpc-proxy/api/gemini-rpc.js && node --check telegram-bot/src/index.js",
+    "test": "node --test gemini-renderer/test/render.test.js gemini-renderer/test/chatgpt.test.js server.test.js"
+  },
+  "dependencies": {
+    "katex": "^0.19.1",
+    "marked": "^18.2.1"
+  }
+}

@@ -15,10 +15,20 @@ export function renderConversationHtml(result) {
   const canonicalUrl =
     escapeAttribute(result.canonicalUrl);
 
+  const platform =
+    result.platform === "chatgpt"
+      ? "chatgpt"
+      : "gemini";
+
+  const sourceLabel =
+    platform === "chatgpt"
+      ? "ChatGPT shared conversation"
+      : "Gemini shared conversation";
+
   const messagesHtml =
     result.messages
       .map((message) =>
-        renderMessage(message)
+        renderMessage(message, { platform })
       )
       .join("\n");
 
@@ -603,7 +613,7 @@ export function renderConversationHtml(result) {
         href="${sourceUrl}"
         rel="nofollow"
       >
-        Gemini shared conversation
+        ${sourceLabel}
       </a>
 
     </div>

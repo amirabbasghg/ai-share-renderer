@@ -19,6 +19,40 @@ function fallbackImage() {
   });
 }
 
+function isBlockedImageHost(hostname) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (
+    host === "localhost" ||
+    host === "localhost.localdomain" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host === "::1" ||
+    host === "0.0.0.0" ||
+    host.startsWith("fc") ||
+    host.startsWith("fd") ||
+    host.startsWith("fe80:")
+  ) {
+    return true;
+  }
+
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    if (
+      a === 10 ||
+      a === 127 ||
+      a === 0 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function handleImage(url) {
   const imageUrl = url.searchParams.get("url");
 
@@ -26,9 +60,12 @@ export async function handleImage(url) {
     return new Response("Invalid image URL.", { status: 400 });
   }
 
-  // placeholderهای Gemini قابل دانلود نیستند
+  // placeholderهای Gemini قابل دانلود نیستند + جلوگیری از دسترسی به آدرس‌های داخلی
   try {
     const u = new URL(imageUrl);
+    if (isBlockedImageHost(u.hostname)) {
+      return new Response("Blocked image host.", { status: 400 });
+    }
     if (
       u.hostname.toLowerCase() === "googleusercontent.com" ||
       /\/lmdx_/i.test(u.pathname)

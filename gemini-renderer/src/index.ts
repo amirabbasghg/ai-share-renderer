@@ -1,7 +1,8 @@
-import puppeteer from "@cloudflare/puppeteer";
+// Stripped for Node.js runtime: legacy Cloudflare Worker prototype
+// import puppeteer from "@cloudflare/puppeteer";
 
 interface Env {
-  BROWSER: Fetcher;
+  BROWSER?: { launch?: () => Promise<any> };
 }
 
 export default {
@@ -22,12 +23,20 @@ export default {
       );
     }
 
-    let browser;
+    let browser: any;
 
     try {
-      console.log("Opening browser...");
+      if (!env?.BROWSER?.launch) {
+        return Response.json(
+          {
+            success: false,
+            error: "Cloudflare Browser Rendering is unavailable in Node.js runtime.",
+          },
+          { status: 501 },
+        );
+      }
 
-      browser = await puppeteer.launch(env.BROWSER);
+      browser = await env.BROWSER.launch();
 
       const page = await browser.newPage();
 

@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Share Renderer",
+  "description": "Renders public Gemini shared conversations into clean RTL-friendly HTML with Markdown, LaTeX math, image proxying, and an integrated Gemini RPC proxy.",
+  "requestFramePermissions": []
+}

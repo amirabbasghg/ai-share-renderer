@@ -10,14 +10,21 @@ marked.setOptions({
 });
 
 
-export function renderMessage(message) {
+export function renderMessage(message, options = {}) {
   const isUser =
     message.role === "user";
+
+  const platform =
+    options?.platform === "chatgpt"
+      ? "chatgpt"
+      : "gemini";
 
   const label =
     isUser
       ? "👤 User"
-      : "🤖 Gemini";
+      : platform === "chatgpt"
+        ? "🤖 ChatGPT"
+        : "🤖 Gemini";
 
   const className =
     isUser

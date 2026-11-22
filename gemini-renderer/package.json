@@ -5,18 +5,16 @@
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "test": "node --test test/render.test.js"
+    "dev": "node ../server.js",
+    "start": "node ../server.js",
+    "test": "node --test test/render.test.js test/chatgpt.test.js"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "^1.0.0",
-    "vitest": "~4.1.0",
     "wrangler": "^4.135.0"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.4.0",
-    "katex": "^0.18.7",
-    "marked": "^18.0.14"
+    "katex": "^0.16.21",
+    "marked": "^15.0.0"
   }
 }

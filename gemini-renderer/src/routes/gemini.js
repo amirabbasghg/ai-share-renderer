@@ -1,4 +1,6 @@
 import { extractGemini } from "../gemini/extract.js";
+import { extractChatGpt } from "../chatgpt/extract.js";
+import { isChatGptShareUrl } from "../chatgpt/resolveShare.js";
 import { renderConversationHtml } from "../rendering/conversation.js";
 
 
@@ -8,17 +10,21 @@ export async function handleGemini(url, env) {
 
   if (!targetUrl) {
     return new Response(
-      "Use: /?url=https://share.gemini.google/...",
+      "Use: /?url=https://share.gemini.google/... or https://chatgpt.com/share/...",
       { status: 400 }
     );
   }
 
   try {
     /*
-     * استخراج مکالمه از Gemini
+     * تشخیص پلتفرم و استخراج مکالمه (ChatGPT یا Gemini)
      */
-    const result =
-      await extractGemini(targetUrl, env);
+    const result = isChatGptShareUrl(targetUrl)
+      ? await extractChatGpt(targetUrl, env)
+      : {
+          platform: "gemini",
+          ...(await extractGemini(targetUrl, env)),
+        };
 
     /*
      * ساخت HTML نهایی
@@ -42,13 +48,13 @@ export async function handleGemini(url, env) {
       html
     );
 
+    const format =
+      url.searchParams.get("format");
+
     /*
-     * حالت تست HTML
+     * حالت Instant View / HTML مستقیم
      */
-    if (
-      url.searchParams.get("format") ===
-      "html"
-    ) {
+    if (format === "html") {
       return new Response(html, {
         status: 200,
         headers: {
@@ -59,10 +65,25 @@ export async function handleGemini(url, env) {
     }
 
     /*
-     * لینک عمومی
+     * حالت PDF (ریدایرکت به مسیر /pdf/{id})
+     */
+    if (format === "pdf") {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `/pdf/${chatId}`,
+        },
+      });
+    }
+
+    /*
+     * لینک‌های عمومی
      */
     const chatUrl =
       `${url.origin}/chat/${chatId}`;
+
+    const pdfUrl =
+      `${url.origin}/pdf/${chatId}`;
 
     /*
      * پاسخ JSON
@@ -70,9 +91,14 @@ export async function handleGemini(url, env) {
     return Response.json({
       success: true,
 
+      platform:
+        result.platform || "gemini",
+
       chatId,
 
       chatUrl,
+
+      pdfUrl,
 
       sourceUrl:
         result.sourceUrl,

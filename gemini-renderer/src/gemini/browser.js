@@ -1,4 +1,5 @@
-import puppeteer from "@cloudflare/puppeteer";
+// Stripped for Node.js runtime: Cloudflare Workers Browser Rendering binding is unavailable locally
+// import puppeteer from "@cloudflare/puppeteer";
 
 const RPC_ID = "ujx1Bf";
 
@@ -61,10 +62,14 @@ export async function extractGeminiWithBrowser(
   env,
   decodeBatchExecute
 ) {
-  const browser =
-    await puppeteer.launch(
-      env.BROWSER
+  if (!env?.BROWSER?.launch) {
+    throw new Error(
+      "Cloudflare Browser Rendering binding is unavailable in the local Node.js runtime."
     );
+  }
+
+  const browser =
+    await env.BROWSER.launch();
 
   try {
     const page =
